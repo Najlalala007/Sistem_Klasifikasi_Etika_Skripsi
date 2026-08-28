@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NCII Risk Detector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080c12;
+      --surface:   #0f1520;
+      --border:    rgba(255,255,255,.07);
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --accent:    #6366f1;
+      --safe:      #22c55e;
+      --harmful:   #ef4444;
+      --warn-bg:   rgba(239,68,68,.1);
+      --safe-bg:   rgba(34,197,94,.1);
+      --radius:    12px;
+    }
+
+    body {
+      width: 360px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 18px 14px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #0d1321 0%, #0f1520 100%);
+    }
+    .logo {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(79,70,229,.4);
+    }
+    .header-text h1 {
+      font-size: 14px; font-weight: 700; letter-spacing: .2px;
+      color: var(--text);
+    }
+    .header-text p {
+      font-size: 11px; color: var(--muted); margin-top: 1px;
+    }
+    .status-pill {
+      margin-left: auto;
+      font-size: 10px; font-weight: 600; letter-spacing: .5px;
+      padding: 3px 8px; border-radius: 99px;
+      text-transform: uppercase;
+    }
+    .status-pill.online  { background: rgba(34,197,94,.15); color: #4ade80; }
+    .status-pill.offline { background: rgba(239,68,68,.15);  color: #f87171; }
+
+    /* ── Result card ── */
+    .result-card {
+      margin: 16px 16px 0;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      transition: border-color .3s;
+    }
+    .result-card.safe    { border-color: rgba(34,197,94,.3); }
+    .result-card.harmful { border-color: rgba(239,68,68,.3); }
+
+    .result-top {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface);
+    }
+    .pulse-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--muted);
+      transition: background .3s, box-shadow .3s;
+    }
+    .pulse-dot.safe {
+      background: var(--safe);
+      box-shadow: 0 0 10px rgba(34,197,94,.5);
+    }
+    .pulse-dot.harmful {
+      background: var(--harmful);
+      box-shadow: 0 0 10px rgba(239,68,68,.5);
+      animation: pulse 1.4s infinite;
+    }
+    .pulse-dot.idle { background: #334155; }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 10px rgba(239,68,68,.5); }
+      50%      { box-shadow: 0 0 18px rgba(239,68,68,.9); }
+    }
+
+    .result-label {
+      font-size: 15px; font-weight: 700;
+    }
+    .result-label.safe    { color: var(--safe); }
+    .result-label.harmful { color: var(--harmful); }
+    .result-label.idle    { color: var(--muted); }
+
+    .result-conf {
+      margin-left: auto;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* confidence bar */
+    .bar-track {
+      height: 4px;
+      background: rgba(255,255,255,.05);
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      transition: width .5s cubic-bezier(.4,0,.2,1), background .4s;
+      background: var(--muted);
+    }
+    .bar-fill.safe    { background: var(--safe); }
+    .bar-fill.harmful { background: var(--harmful); }
+
+    /* warning message */
+    .warning-msg {
+      display: none;
+      padding: 10px 16px;
+      background: var(--warn-bg);
+      border-top: 1px solid rgba(239,68,68,.2);
+      font-size: 12px;
+      color: #fca5a5;
+      line-height: 1.5;
+    }
+    .warning-msg.show { display: block; }
+
+    /* ── Manual analyse box ── */
+    .analyse-section {
+      padding: 14px 16px 0;
+    }
+    .analyse-section label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 8px;
+    }
+    .input-row {
+      display: flex; gap: 8px;
+    }
+    textarea {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      padding: 9px 12px;
+      resize: none;
+      height: 64px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: #334155; }
+
+    button#analyse-btn {
+      flex-shrink: 0;
+      width: 44px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    button#analyse-btn:hover  { opacity: .85; }
+    button#analyse-btn:active { transform: scale(.96); }
+
+    /* ── Footer stats ── */
+    .footer {
+      display: flex;
+      gap: 0;
+      padding: 12px 16px 14px;
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .stat {
+      flex: 1;
+      text-align: center;
+    }
+    .stat + .stat { border-left: 1px solid var(--border); }
+    .stat-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .stat-key {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-top: 1px;
+    }
+
+    /* spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">🛡️</div>
+  <div class="header-text">
+    <h1>NCII Risk Detector</h1>
+    <p>Protecting AI platforms in real-time</p>
+  </div>
+  <div class="status-pill offline" id="server-pill">Offline</div>
+</div>
+
+<!-- Result Card -->
+<div class="result-card" id="result-card">
+  <div class="result-top">
+    <div class="pulse-dot idle" id="pulse-dot"></div>
+    <div class="result-label idle" id="result-label">Awaiting input…</div>
+    <div class="result-conf" id="result-conf">—</div>
+  </div>
+  <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+  <div class="warning-msg" id="warning-msg">
+    ⚠️ This prompt may contain harmful or unethical content. Please revise before generating images.
+  </div>
+</div>
+
+<!-- Manual Analyse -->
+<div class="analyse-section">
+  <label>Manually test a prompt</label>
+  <div class="input-row">
+    <textarea id="manual-input" placeholder="Paste or type a prompt to check…" rows="3"></textarea>
+    <button id="analyse-btn" title="Analyse">→</button>
+  </div>
+</div>
+
+<!-- Footer stats -->
+<div class="footer">
+  <div class="stat">
+    <div class="stat-val" id="stat-threshold">—</div>
+    <div class="stat-key">Threshold</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="stat-vocab">—</div>
+    <div class="stat-key">Vocab Size</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="stat-model">RF</div>
+    <div class="stat-key">Model</div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
