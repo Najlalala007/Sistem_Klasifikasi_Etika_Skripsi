@@ -1,0 +1,1 @@
+containing extension's icon
